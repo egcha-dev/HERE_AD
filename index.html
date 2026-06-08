@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VivaMas — Alliance Duel Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --raven:#2E75B6; --building:#548235; --scroll:#BF8F00; --hero:#C55A11; --speedup:#7030A0; --raid:#C00000;
+  --navy:#1F3864; --maroon:#7B0000; --maroon-bright:#A50000;
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#2a3140;
+  --txt:#e6edf3; --txt-dim:#8b98a8; --gold:#FFD700;
+  --c1-bg:#FFC7CE;--c1-fg:#9C0006;--c2-bg:#FFEB9C;--c2-fg:#9C5700;--c3-bg:#FFCC66;--c3-fg:#7F3F00;
+  --c4-bg:#FFA500;--c4-fg:#fff;--c5-bg:#A9D18E;--c5-fg:#375623;--c6-bg:#70AD47;--c6-fg:#fff;
+  --c7-bg:#00B0F0;--c7-fg:#fff;--c8-bg:#0070C0;--c8-fg:#fff;--c9-bg:#FFD700;--c9-fg:#7A4500;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI',-apple-system,system-ui,sans-serif;
+  background:var(--bg);
+  background-image:radial-gradient(circle at 15% 10%,rgba(47,117,182,.08),transparent 40%),
+                   radial-gradient(circle at 85% 90%,rgba(192,0,0,.08),transparent 40%);
+  color:var(--txt);min-height:100vh;
+}
+header{
+  background:linear-gradient(135deg,var(--navy),#16294a);
+  padding:22px 28px;border-bottom:2px solid var(--raven);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  box-shadow:0 4px 24px rgba(0,0,0,.4);
+}
+header h1{font-size:1.55rem;letter-spacing:.5px;display:flex;align-items:center;gap:12px}
+header h1 .crest{font-size:1.8rem}
+header .sub{color:var(--txt-dim);font-size:.82rem;margin-top:3px;font-weight:400}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{
+  background:var(--raven);color:#fff;border:none;padding:10px 18px;border-radius:8px;
+  font-weight:600;cursor:pointer;font-size:.88rem;transition:.15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--txt-dim)}
+.btn.ghost:hover{border-color:var(--raid);color:var(--txt)}
+.btn.danger{background:var(--maroon)}
+input[type=file]{display:none}
+
+.weekbar{padding:10px 28px;background:var(--panel);border-bottom:1px solid var(--border);
+  font-size:.85rem;color:var(--txt-dim);display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.weekbar b{color:var(--txt)}
+.pill{background:var(--panel2);border:1px solid var(--border);padding:3px 10px;border-radius:20px;font-size:.78rem}
+
+nav.tabs{display:flex;gap:2px;padding:0 22px;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto}
+nav.tabs button{
+  background:none;border:none;color:var(--txt-dim);padding:14px 20px;cursor:pointer;
+  font-size:.9rem;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap;transition:.15s;
+}
+nav.tabs button:hover{color:var(--txt)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--raven)}
+
+main{padding:26px;max-width:1500px;margin:0 auto}
+.view{display:none;animation:fade .3s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.empty{text-align:center;padding:80px 20px;color:var(--txt-dim)}
+.empty .big{font-size:3.2rem;margin-bottom:14px}
+.empty h2{color:var(--txt);font-weight:600;margin-bottom:8px}
+.drop{margin-top:26px;border:2px dashed var(--border);border-radius:14px;padding:48px;
+  cursor:pointer;transition:.2s;max-width:520px;margin-left:auto;margin-right:auto}
+.drop:hover,.drop.over{border-color:var(--raven);background:var(--panel)}
+
+.grid{display:grid;gap:20px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.card-h{padding:14px 18px;font-weight:700;font-size:.95rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px}
+.card-b{padding:4px}
+
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{background:var(--panel2);padding:9px 12px;text-align:left;font-weight:700;font-size:.78rem;
+  text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0}
+td{padding:8px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.dim{color:var(--txt-dim)}
+.medal{font-size:1rem}
+
+/* day theme header chips */
+.th-raven{background:var(--raven)!important;color:#fff}
+.th-building{background:var(--building)!important;color:#fff}
+.th-scroll{background:var(--scroll)!important;color:#fff}
+.th-hero{background:var(--hero)!important;color:#fff}
+.th-speedup{background:var(--speedup)!important;color:#fff}
+.th-raid{background:var(--raid)!important;color:#fff}
+.zero{color:#fff;font-weight:700;text-align:center;border-radius:4px}
+.z-raven{background:var(--raven)}.z-building{background:var(--building)}.z-scroll{background:var(--scroll)}
+.z-hero{background:var(--hero)}.z-speedup{background:var(--speedup)}.z-raid{background:var(--raid)}
+
+.cols2{grid-template-columns:1fr 1fr}
+.cols3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:1000px){.cols2,.cols3{grid-template-columns:1fr}}
+
+.chart-wrap{position:relative;height:340px;padding:14px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.kpi .label{color:var(--txt-dim);font-size:.74rem;text-transform:uppercase;letter-spacing:.5px}
+.kpi .val{font-size:1.6rem;font-weight:800;margin-top:4px}
+.kpi.r1{border-left:4px solid var(--raven)}.kpi.r2{border-left:4px solid var(--building)}
+.kpi.r3{border-left:4px solid var(--hero)}.kpi.r4{border-left:4px solid var(--raid)}
+
+.theme-tot{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;margin:6px;
+  border-radius:8px;color:#fff;font-weight:700}
+.chest{display:inline-block;padding:2px 8px;border-radius:5px;font-size:.72rem;font-weight:700;margin-left:6px}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 16px;font-size:.8rem;color:var(--txt-dim)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+.note-tag{color:var(--raid);font-size:.8rem}
+.player-nm{color:#ff9b9b;font-weight:600}
+
+footer{padding:30px;text-align:center;color:var(--txt-dim);font-size:.78rem}
+.day-emoji{margin-right:5px}
+select{background:var(--panel2);color:var(--txt);border:1px solid var(--border);padding:8px 12px;border-radius:8px;font-size:.85rem}
+.scrollx{overflow-x:auto}
+.savedbadge{font-size:.72rem;color:var(--building);display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1><span class="crest">⚔️</span> Alliance Duel Portal</h1>
+    <div class="sub">VivaMas — calcula todo desde el Historical de la semana</div>
+  </div>
+  <div class="controls">
+    <span class="savedbadge" id="savedBadge">✓ Overall guardado</span>
+    <label class="btn"><span>📂</span> Subir semana (.xlsx)
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+    </label>
+    <button class="btn ghost" id="archiveBtn" title="Suma la semana actual al acumulado histórico">📊 Archivar → Overall</button>
+    <button class="btn danger" id="resetBtn" title="Borra el acumulado histórico guardado">🗑 Reset histórico</button>
+  </div>
+</header>
+
+<div class="weekbar" id="weekbar" style="display:none">
+  <span>📅 Semana: <b id="weekRange">—</b></span>
+  <span class="pill" id="daysLoaded">0/6 días</span>
+  <span class="pill" id="playersLoaded">0 jugadores</span>
+</div>
+
+<nav class="tabs" id="tabs" style="display:none">
+  <button data-v="graphic" class="active">📊 Graphic</button>
+  <button data-v="current">📅 Current Week</button>
+  <button data-v="under">⚠️ Underperformers</button>
+  <button data-v="overall">🏆 Overall</button>
+  <button data-v="color">🎁 Chest Tiers</button>
+</nav>
+
+<main>
+  <div id="emptyState" class="empty">
+    <div class="big">⚔️</div>
+    <h2>Sube el Excel de la semana</h2>
+    <p class="dim">El portal lee la hoja <b>Historical</b> (los 6 días) y calcula Graphic, Current Week, Underperformers y acumula el Overall automáticamente.</p>
+    <label class="drop" id="dropZone">
+      <input type="file" id="fileInput2" accept=".xlsx,.xls">
+      <div style="font-size:2.2rem;margin-bottom:10px">📂</div>
+      <div><b>Click o arrastra</b> tu archivo .xlsx aquí</div>
+      <div class="dim" style="margin-top:8px;font-size:.82rem">Debe contener la hoja "Historical" con los días de la semana</div>
+    </label>
+  </div>
+
+  <div id="view-graphic" class="view"></div>
+  <div id="view-current" class="view"></div>
+  <div id="view-under" class="view"></div>
+  <div id="view-overall" class="view"></div>
+  <div id="view-color" class="view"></div>
+</main>
+
+<footer>VivaMas Alliance Duel Portal · datos calculados en tu navegador · Overall persiste en este dispositivo</footer>
+
+<script>
+const DAYS = ['Raven','Building','Scroll','Hero','Speedup','Raid'];
+const DAY_EMOJI = {Raven:'🐦',Building:'🏗',Scroll:'📜',Hero:'⚔',Speedup:'⚡',Raid:'💥'};
+const DAY_LABEL = {Raven:'Raven',Building:'Building',Scroll:'Scroll/Open',Hero:'Hero',Speedup:'Speedup',Raid:'Raid'};
+const DAY_COLOR = {Raven:'#2E75B6',Building:'#548235',Scroll:'#BF8F00',Hero:'#C55A11',Speedup:'#7030A0',Raid:'#C00000'};
+const DAY_CLASS = {Raven:'raven',Building:'building',Scroll:'scroll',Hero:'hero',Speedup:'speedup',Raid:'raid'};
+const CHESTS = [
+  {n:'C9',label:'Chest 9 ⭐',min:7190000,bg:'var(--c9-bg)',fg:'var(--c9-fg)'},
+  {n:'C8',label:'Chest 8',min:3620000,bg:'var(--c8-bg)',fg:'var(--c8-fg)'},
+  {n:'C7',label:'Chest 7',min:2630000,bg:'var(--c7-bg)',fg:'var(--c7-fg)'},
+  {n:'C6',label:'Chest 6',min:2280000,bg:'var(--c6-bg)',fg:'var(--c6-fg)'},
+  {n:'C5',label:'Chest 5',min:1020000,bg:'var(--c5-bg)',fg:'var(--c5-fg)'},
+  {n:'C4',label:'Chest 4',min:650000,bg:'var(--c4-bg)',fg:'var(--c4-fg)'},
+  {n:'C3',label:'Chest 3',min:550000,bg:'var(--c3-bg)',fg:'var(--c3-fg)'},
+  {n:'C2',label:'Chest 2',min:145000,bg:'var(--c2-bg)',fg:'var(--c2-fg)'},
+  {n:'C1',label:'Chest 1',min:38000,bg:'var(--c1-bg)',fg:'var(--c1-fg)'},
+];
+const STORE_KEY = 'vivamas_ad_overall_v1';
+
+let WEEK = null;   // {days:{dayName:[{rank,player,points,date}]}, players:{name:{Raven..,Total,Days}}, dates:{}}
+let charts = [];
+
+const fmt = n => (n||0).toLocaleString('en-US');
+const $ = s => document.querySelector(s);
+
+function chestFor(pts){
+  for(const c of CHESTS) if(pts>=c.min) return c;
+  return null;
+}
+
+/* ---------- File handling ---------- */
+['fileInput','fileInput2'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',e=>{
+    if(e.target.files[0]) readFile(e.target.files[0]);
+  });
+});
+const dz = $('#dropZone');
+['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
+dz.addEventListener('drop',e=>{if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])});
+
+function readFile(file){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      parseHistorical(wb);
+    }catch(err){ alert('Error leyendo el archivo: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ---------- Parse Historical ---------- */
+function parseHistorical(wb){
+  const shName = wb.SheetNames.find(n=>n.toLowerCase()==='historical');
+  if(!shName){ alert('No encontré la hoja "Historical" en el archivo.'); return; }
+  const sh = wb.Sheets[shName];
+  const rows = XLSX.utils.sheet_to_json(sh,{header:1,raw:true});
+
+  // find the header row that contains 'date' in col0 (data starts next non-empty)
+  // Day blocks: cols 0-3, 4-7, 8-11, 12-15, 16-19, 20-23
+  const dayCols = [0,4,8,12,16,20];
+  // locate first data row: a row where col0 is a date or col2 is a player name and col0 not 'date'
+  let startRow = -1;
+  for(let i=0;i<rows.length;i++){
+    const c0 = rows[i][0];
+    const c2 = rows[i][2];
+    const isHeaderWord = (typeof c0==='string' && c0.toLowerCase()==='date');
+    const looksData = c2 && typeof c2==='string' && !isHeaderWord &&
+                      !(typeof c0==='string' && /historical|raven|일차/i.test(c0));
+    if(looksData && (c0 instanceof Date || typeof c0==='number' || typeof c0==='string')){
+      // ensure it's after a 'date' header
+      startRow = i; break;
+    }
+  }
+  if(startRow<0){ alert('No pude localizar los datos en Historical.'); return; }
+
+  const days = {};
+  DAYS.forEach((dn,di)=>{
+    const base = dayCols[di];
+    const list = [];
+    for(let r=startRow;r<rows.length;r++){
+      const row = rows[r]||[];
+      const player = row[base+2];
+      const pts = row[base+3];
+      const dt = row[base];
+      if(player==null || String(player).trim()==='') continue;
+      if(typeof player==='string' && player.toLowerCase()==='player') continue;
+      const p = parseInt(pts);
+      list.push({rank:row[base+1], player:String(player), points:isNaN(p)?0:p, date:dt});
+    }
+    days[dn]=list;
+  });
+
+  // Build per-player week aggregation
+  const players = {};
+  DAYS.forEach(dn=>{
+    days[dn].forEach(e=>{
+      if(!players[e.player]) players[e.player]={Raven:0,Building:0,Scroll:0,Hero:0,Speedup:0,Raid:0};
+      players[e.player][dn] = Math.max(players[e.player][dn], e.points);
+    });
+  });
+  Object.keys(players).forEach(p=>{
+    players[p].Total = DAYS.reduce((s,d)=>s+players[p][d],0);
+    players[p].Days = DAYS.filter(d=>players[p][d]>0).length;
+  });
+
+  // dates
+  const dates={};
+  DAYS.forEach((dn,di)=>{
+    const first = days[dn][0];
+    dates[dn] = first ? first.date : null;
+  });
+
+  WEEK = {days,players,dates};
+  renderAll();
+}
+
+function dateStr(d){
+  if(!d) return '—';
+  const dt = (d instanceof Date)? d : new Date(d);
+  if(isNaN(dt)) return String(d);
+  return dt.toLocaleDateString('en-US',{month:'short',day:'2-digit'});
+}
+
+/* ---------- Render orchestration ---------- */
+function renderAll(){
+  $('#emptyState').style.display='none';
+  $('#tabs').style.display='flex';
+  $('#weekbar').style.display='flex';
+
+  const pls = Object.keys(WEEK.players).length;
+  const daysWithData = DAYS.filter(d=>WEEK.days[d].length>0).length;
+  $('#weekRange').textContent = dateStr(WEEK.dates.Raven)+' → '+dateStr(WEEK.dates.Raid);
+  $('#daysLoaded').textContent = daysWithData+'/6 días';
+  $('#playersLoaded').textContent = pls+' jugadores';
+
+  renderGraphic();
+  renderCurrent();
+  renderUnder();
+  renderOverall();
+  renderColor();
+  showSavedBadge();
+}
+
+/* ---------- GRAPHIC ---------- */
+function renderGraphic(){
+  destroyCharts();
+  const ranked = Object.entries(WEEK.players).sort((a,b)=>b[1].Total-a[1].Total);
+  const top10 = ranked.slice(0,10);
+  const bottom10 = [...ranked].reverse().slice(0,10).reverse();
+  const themeTotals = DAYS.map(dn=>({dn,total:WEEK.days[dn].reduce((s,e)=>s+e.points,0)}));
+  const allianceTotal = themeTotals.reduce((s,t)=>s+t.total,0);
+
+  let html = `
+  <div class="kpi-row">
+    <div class="kpi r1"><div class="label">Total Alianza</div><div class="val">${fmt(allianceTotal)}</div></div>
+    <div class="kpi r2"><div class="label">Jugadores</div><div class="val">${Object.keys(WEEK.players).length}</div></div>
+    <div class="kpi r3"><div class="label">Top Scorer</div><div class="val" style="font-size:1.1rem">${top10[0]?top10[0][0]:'—'}</div></div>
+    <div class="kpi r4"><div class="label">Mejor día (pts)</div><div class="val" style="font-size:1.1rem">${
+      (()=>{const m=[...themeTotals].sort((a,b)=>b.total-a.total)[0];return m?DAY_LABEL[m.dn]:'—'})()
+    }</div></div>
+  </div>
+
+  <div class="grid cols2">
+    <div class="card">
+      <div class="card-h">📊 Top 10 — Puntos por Tema (stacked)</div>
+      <div class="chart-wrap"><canvas id="chTheme"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-h">🏆 Top 10 — Total Semanal</div>
+      <div class="chart-wrap"><canvas id="chTop"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid cols2" style="margin-top:20px">
+    <div class="card">
+      <div class="card-h">⚡ Puntos de Alianza por Tema</div>
+      <div class="chart-wrap"><canvas id="chAlliance"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-h">🔻 Bottom 10 — Necesitan Mejorar</div>
+      <div class="chart-wrap"><canvas id="chBottom"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid cols2" style="margin-top:20px">
+    <div class="card">
+      <div class="card-h">🗓 Totales por Tema</div>
+      <div class="card-b">${themeTotals.map(t=>`
+        <div class="theme-tot" style="background:${DAY_COLOR[t.dn]}">
+          <span>${DAY_EMOJI[t.dn]} ${DAY_LABEL[t.dn]}</span><span>${fmt(t.total)}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">📋 Top 10 — Desglose por día</div>
+      <div class="scrollx"><table>
+        <thead><tr><th>Player</th>${DAYS.map(d=>`<th class="th-${DAY_CLASS[d]}">${DAY_EMOJI[d]} ${d}</th>`).join('')}<th class="num">Total</th></tr></thead>
+        <tbody>${top10.map(([p,w])=>`<tr>
+          <td class="player-nm">${p}</td>
+          ${DAYS.map(d=>`<td class="num ${w[d]?'':'dim'}">${w[d]?fmt(w[d]):'—'}</td>`).join('')}
+          <td class="num"><b>${fmt(w.Total)}</b></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+  </div>`;
+  $('#view-graphic').innerHTML = html;
+
+  // Stacked theme chart
+  charts.push(new Chart($('#chTheme'),{
+    type:'bar',
+    data:{
+      labels:top10.map(t=>t[0]),
+      datasets:DAYS.map(dn=>({label:dn,data:top10.map(t=>t[1][dn]),backgroundColor:DAY_COLOR[dn]}))
+    },
+    options:stacked()
+  }));
+  // Top 10 total
+  charts.push(new Chart($('#chTop'),{
+    type:'bar',
+    data:{labels:top10.map(t=>t[0]),datasets:[{label:'Total',data:top10.map(t=>t[1].Total),backgroundColor:'#FFD700'}]},
+    options:hbar()
+  }));
+  // Alliance by theme
+  charts.push(new Chart($('#chAlliance'),{
+    type:'bar',
+    data:{labels:themeTotals.map(t=>DAY_LABEL[t.dn]),datasets:[{label:'Pts',data:themeTotals.map(t=>t.total),backgroundColor:themeTotals.map(t=>DAY_COLOR[t.dn])}]},
+    options:vbar()
+  }));
+  // Bottom 10
+  charts.push(new Chart($('#chBottom'),{
+    type:'bar',
+    data:{labels:bottom10.map(t=>t[0]),datasets:[{label:'Total',data:bottom10.map(t=>t[1].Total),backgroundColor:'#C00000'}]},
+    options:hbar()
+  }));
+}
+
+/* chart option helpers */
+const gridc='rgba(255,255,255,.06)', tick='#8b98a8';
+function baseOpts(){return{responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{labels:{color:tick,boxWidth:12,font:{size:10}}}},
+}}
+function hbar(){return{...baseOpts(),indexAxis:'y',plugins:{legend:{display:false}},
+  scales:{x:{ticks:{color:tick,callback:v=>v>=1e6?(v/1e6)+'M':v},grid:{color:gridc}},
+          y:{ticks:{color:tick,font:{size:11}},grid:{display:false}}}}}
+function vbar(){return{...baseOpts(),plugins:{legend:{display:false}},
+  scales:{y:{ticks:{color:tick,callback:v=>v>=1e6?(v/1e6)+'M':v},grid:{color:gridc}},
+          x:{ticks:{color:tick,font:{size:10}},grid:{display:false}}}}}
+function stacked(){return{...baseOpts(),indexAxis:'y',
+  scales:{x:{stacked:true,ticks:{color:tick,callback:v=>v>=1e6?(v/1e6)+'M':v},grid:{color:gridc}},
+          y:{stacked:true,ticks:{color:tick,font:{size:11}},grid:{display:false}}}}}
+
+/* ---------- CURRENT WEEK ---------- */
+function renderCurrent(){
+  let html = `<div class="grid cols3">`;
+  DAYS.forEach(dn=>{
+    const list = [...WEEK.days[dn]].sort((a,b)=>b.points-a.points);
+    html += `<div class="card">
+      <div class="card-h th-${DAY_CLASS[dn]}" style="border-radius:0">${DAY_EMOJI[dn]} ${DAY_LABEL[dn]} <span class="dim" style="margin-left:auto;font-weight:400;color:rgba(255,255,255,.8)">${dateStr(WEEK.dates[dn])}</span></div>
+      <div class="scrollx" style="max-height:430px;overflow-y:auto"><table>
+        <thead><tr><th>#</th><th>Player</th><th class="num">Points</th><th>Chest</th></tr></thead>
+        <tbody>${list.map((e,i)=>{
+          const c = chestFor(e.points);
+          return `<tr>
+            <td class="dim">${i+1}</td>
+            <td>${e.player}</td>
+            <td class="num">${fmt(e.points)}</td>
+            <td>${c?`<span class="chest" style="background:${c.bg};color:${c.fg}">${c.n}</span>`:'<span class="dim">—</span>'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  });
+  html += `</div>`;
+  $('#view-current').innerHTML = html;
+}
+
+/* ---------- UNDERPERFORMERS ---------- */
+function renderUnder(){
+  // Anyone who scored 0 on ANY day they could've played → flag, sorted by total asc
+  const ups = Object.entries(WEEK.players)
+    .map(([p,w])=>({p,w,zeros:DAYS.filter(d=>w[d]===0)}))
+    .filter(o=>o.zeros.length>0)
+    .sort((a,b)=>a.w.Total-b.w.Total);
+
+  let html = `
+  <div class="card">
+    <div class="card-h" style="background:var(--maroon-bright);color:#fff;border-radius:0">
+      ⚠️ Underperformers — Scored 0 on a played day
+      <span class="dim" style="margin-left:auto;color:rgba(255,255,255,.7);font-weight:400">${ups.length} jugadores</span>
+    </div>
+    <div class="legend">${DAYS.map(d=>`<span><span class="dot" style="background:${DAY_COLOR[d]}"></span>${d} = 0 pts</span>`).join('')}</div>
+    <div class="scrollx"><table>
+      <thead><tr><th>#</th><th>Player</th><th class="num">Total</th>
+        ${DAYS.map(d=>`<th class="th-${DAY_CLASS[d]} num">${DAY_EMOJI[d]} ${d}</th>`).join('')}
+        <th class="num">Días</th><th>Notes</th></tr></thead>
+      <tbody>${ups.map((o,i)=>`<tr>
+        <td class="dim">${i+1}</td>
+        <td class="player-nm">${o.p}</td>
+        <td class="num">${fmt(o.w.Total)}</td>
+        ${DAYS.map(d=>{
+          if(o.w[d]===0) return `<td class="zero z-${DAY_CLASS[d]}">0</td>`;
+          return `<td class="num">${fmt(o.w[d])}</td>`;
+        }).join('')}
+        <td class="num"><b style="color:var(--hero)">${o.w.Days}</b></td>
+        <td class="note-tag">0 pts: ${o.zeros.join(', ')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+  $('#view-under').innerHTML = html;
+}
+
+/* ---------- OVERALL (accumulated, persisted) ---------- */
+function loadOverall(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function renderOverall(){
+  const stored = loadOverall();
+  // Merge view = stored + (preview of current week not yet archived)
+  // Show stored only; show note that archiving adds current week
+  const rows = Object.entries(stored).map(([p,w])=>({p,w}))
+    .sort((a,b)=>b.w.Total-a.w.Total);
+
+  const medals=['🥇','🥈','🥉'];
+  let html='';
+  if(rows.length===0){
+    html = `<div class="card"><div class="card-h">🏆 Overall Leaderboard (acumulado)</div>
+      <div class="empty" style="padding:50px">
+        <div class="big">🏆</div>
+        <h2 style="font-size:1.1rem">Aún no hay datos acumulados</h2>
+        <p class="dim">Dale a <b>"Archivar → Overall"</b> arriba para sumar esta semana al histórico.<br>El acumulado se guarda en este navegador y persiste entre semanas.</p>
+      </div></div>`;
+  } else {
+    html = `<div class="card">
+      <div class="card-h">🏆 Overall Leaderboard — All-time (acumulado)
+        <span class="dim" style="margin-left:auto;font-weight:400">${rows.length} jugadores · ${getWeekCount()} semanas archivadas</span>
+      </div>
+      <div class="scrollx"><table>
+        <thead><tr><th>Rank</th><th>Player</th><th class="num">Total</th>
+          ${DAYS.map(d=>`<th class="th-${DAY_CLASS[d]} num">${DAY_EMOJI[d]} ${d}</th>`).join('')}
+          <th class="num">Semanas</th></tr></thead>
+        <tbody>${rows.map((o,i)=>`<tr>
+          <td class="medal">${medals[i]||(i+1)}</td>
+          <td class="player-nm">${o.p}</td>
+          <td class="num"><b>${fmt(o.w.Total)}</b></td>
+          ${DAYS.map(d=>`<td class="num ${o.w[d]?'':'dim'}">${o.w[d]?fmt(o.w[d]):'—'}</td>`).join('')}
+          <td class="num dim">${o.w.Weeks||1}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+  $('#view-overall').innerHTML = html;
+}
+function getWeekCount(){
+  const m = Object.values(loadOverall()).map(w=>w.Weeks||1);
+  return m.length? Math.max(...m):0;
+}
+
+/* archive current week into Overall */
+$('#archiveBtn').addEventListener('click',()=>{
+  if(!WEEK){ alert('Primero sube una semana.'); return; }
+  if(!confirm('¿Sumar esta semana al acumulado Overall?\n(Si ya archivaste esta misma semana, se sumaría doble — usa Reset si te equivocas.)')) return;
+  const store = loadOverall();
+  Object.entries(WEEK.players).forEach(([p,w])=>{
+    if(!store[p]) store[p]={Raven:0,Building:0,Scroll:0,Hero:0,Speedup:0,Raid:0,Total:0,Weeks:0};
+    DAYS.forEach(d=>store[p][d]+=w[d]);
+    store[p].Total += w.Total;
+    store[p].Weeks = (store[p].Weeks||0)+1;
+  });
+  localStorage.setItem(STORE_KEY,JSON.stringify(store));
+  renderOverall(); showSavedBadge();
+  switchView('overall');
+  alert('✓ Semana archivada al Overall.');
+});
+
+$('#resetBtn').addEventListener('click',()=>{
+  if(confirm('¿Borrar TODO el acumulado histórico guardado en este navegador? No se puede deshacer.')){
+    localStorage.removeItem(STORE_KEY); renderOverall(); showSavedBadge();
+  }
+});
+function showSavedBadge(){
+  $('#savedBadge').style.display = Object.keys(loadOverall()).length? 'inline':'none';
+}
+
+/* ---------- COLOR / chest tiers ---------- */
+function renderColor(){
+  let html = `<div class="grid cols2">
+    <div class="card">
+      <div class="card-h">🎁 Chest Tiers (por puntos en un día)</div>
+      <div class="card-b"><table>
+        <thead><tr><th>Tier</th><th class="num">Mínimo</th><th>Muestra</th></tr></thead>
+        <tbody>${CHESTS.map(c=>`<tr>
+          <td><b>${c.n}</b></td>
+          <td class="num">≥ ${fmt(c.min)}</td>
+          <td><span class="chest" style="background:${c.bg};color:${c.fg}">${c.n} — ${c.label}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="card-h">📅 Colores por Día / Tema</div>
+      <div class="card-b">${DAYS.map((d,i)=>`
+        <div class="theme-tot" style="background:${DAY_COLOR[d]}">
+          <span>Day ${i+1} — ${DAY_EMOJI[d]} ${DAY_LABEL[d]}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+  $('#view-color').innerHTML = html;
+}
+
+/* ---------- Tabs ---------- */
+function switchView(v){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='view-'+v));
+}
+document.querySelectorAll('nav.tabs button').forEach(b=>{
+  b.addEventListener('click',()=>switchView(b.dataset.v));
+});
+// default
+switchView('graphic');
+
+function destroyCharts(){charts.forEach(c=>c.destroy());charts=[]}
+showSavedBadge();
+</script>
+</body>
+</html>
