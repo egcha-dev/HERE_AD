@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VivaMas — Alliance Duel Portal</title>
+<title>HERE — Alliance Duel Portal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -65,9 +65,11 @@ main{padding:26px;max-width:1500px;margin:0 auto}
 .empty{text-align:center;padding:80px 20px;color:var(--txt-dim)}
 .empty .big{font-size:3.2rem;margin-bottom:14px}
 .empty h2{color:var(--txt);font-weight:600;margin-bottom:8px}
-.drop{margin-top:26px;border:2px dashed var(--border);border-radius:14px;padding:48px;
-  cursor:pointer;transition:.2s;max-width:520px;margin-left:auto;margin-right:auto}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  margin:26px auto 0;border:2px dashed var(--border);border-radius:14px;padding:48px;
+  cursor:pointer;transition:.2s;max-width:520px;width:100%;text-align:center}
 .drop:hover,.drop.over{border-color:var(--raven);background:var(--panel)}
+.drop>div{width:100%}
 
 .grid{display:grid;gap:20px}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
@@ -130,22 +132,22 @@ select{background:var(--panel2);color:var(--txt);border:1px solid var(--border);
 <header>
   <div>
     <h1><span class="crest">⚔️</span> Alliance Duel Portal</h1>
-    <div class="sub">VivaMas — calcula todo desde el Historical de la semana</div>
+    <div class="sub">VivaMas — computes everything from the week's Historical data</div>
   </div>
   <div class="controls">
-    <span class="savedbadge" id="savedBadge">✓ Overall guardado</span>
-    <label class="btn"><span>📂</span> Subir semana (.xlsx)
+    <span class="savedbadge" id="savedBadge">✓ Overall saved</span>
+    <label class="btn"><span>📂</span> Upload week (.xlsx)
       <input type="file" id="fileInput" accept=".xlsx,.xls">
     </label>
-    <button class="btn ghost" id="archiveBtn" title="Suma la semana actual al acumulado histórico">📊 Archivar → Overall</button>
-    <button class="btn danger" id="resetBtn" title="Borra el acumulado histórico guardado">🗑 Reset histórico</button>
+    <button class="btn ghost" id="archiveBtn" title="Add the current week to the all-time total">📊 Archive → Overall</button>
+    <button class="btn danger" id="resetBtn" title="Clear the saved all-time total">🗑 Reset history</button>
   </div>
 </header>
 
 <div class="weekbar" id="weekbar" style="display:none">
-  <span>📅 Semana: <b id="weekRange">—</b></span>
-  <span class="pill" id="daysLoaded">0/6 días</span>
-  <span class="pill" id="playersLoaded">0 jugadores</span>
+  <span>📅 Week: <b id="weekRange">—</b></span>
+  <span class="pill" id="daysLoaded">0/6 days</span>
+  <span class="pill" id="playersLoaded">0 players</span>
 </div>
 
 <nav class="tabs" id="tabs" style="display:none">
@@ -159,13 +161,13 @@ select{background:var(--panel2);color:var(--txt);border:1px solid var(--border);
 <main>
   <div id="emptyState" class="empty">
     <div class="big">⚔️</div>
-    <h2>Sube el Excel de la semana</h2>
-    <p class="dim">El portal lee la hoja <b>Historical</b> (los 6 días) y calcula Graphic, Current Week, Underperformers y acumula el Overall automáticamente.</p>
+    <h2>Upload the week's Excel</h2>
+    <p class="dim">The portal reads the <b>Historical</b> sheet (all 6 days) and computes Graphic, Current Week, Underperformers, and accumulates the Overall automatically.</p>
     <label class="drop" id="dropZone">
       <input type="file" id="fileInput2" accept=".xlsx,.xls">
       <div style="font-size:2.2rem;margin-bottom:10px">📂</div>
-      <div><b>Click o arrastra</b> tu archivo .xlsx aquí</div>
-      <div class="dim" style="margin-top:8px;font-size:.82rem">Debe contener la hoja "Historical" con los días de la semana</div>
+      <div><b>Click or drag</b> your .xlsx file here</div>
+      <div class="dim" style="margin-top:8px;font-size:.82rem">Must contain the "Historical" sheet with the week's days</div>
     </label>
   </div>
 
@@ -176,7 +178,7 @@ select{background:var(--panel2);color:var(--txt);border:1px solid var(--border);
   <div id="view-color" class="view"></div>
 </main>
 
-<footer>VivaMas Alliance Duel Portal · datos calculados en tu navegador · Overall persiste en este dispositivo</footer>
+<footer>VivaMas Alliance Duel Portal · computed in your browser · Overall persists on this device</footer>
 
 <script>
 const DAYS = ['Raven','Building','Scroll','Hero','Speedup','Raid'];
@@ -196,6 +198,7 @@ const CHESTS = [
   {n:'C1',label:'Chest 1',min:38000,bg:'var(--c1-bg)',fg:'var(--c1-fg)'},
 ];
 const STORE_KEY = 'vivamas_ad_overall_v1';
+const WEEK_KEY  = 'vivamas_ad_currentweek_v1';
 
 let WEEK = null;   // {days:{dayName:[{rank,player,points,date}]}, players:{name:{Raven..,Total,Days}}, dates:{}}
 let charts = [];
@@ -225,7 +228,7 @@ function readFile(file){
     try{
       const wb = XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
       parseHistorical(wb);
-    }catch(err){ alert('Error leyendo el archivo: '+err.message); }
+    }catch(err){ alert('Error reading file: '+err.message); }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -233,7 +236,7 @@ function readFile(file){
 /* ---------- Parse Historical ---------- */
 function parseHistorical(wb){
   const shName = wb.SheetNames.find(n=>n.toLowerCase()==='historical');
-  if(!shName){ alert('No encontré la hoja "Historical" en el archivo.'); return; }
+  if(!shName){ alert('Could not find the "Historical" sheet in the file.'); return; }
   const sh = wb.Sheets[shName];
   const rows = XLSX.utils.sheet_to_json(sh,{header:1,raw:true});
 
@@ -253,7 +256,7 @@ function parseHistorical(wb){
       startRow = i; break;
     }
   }
-  if(startRow<0){ alert('No pude localizar los datos en Historical.'); return; }
+  if(startRow<0){ alert('Could not locate data in Historical.'); return; }
 
   const days = {};
   DAYS.forEach((dn,di)=>{
@@ -293,6 +296,7 @@ function parseHistorical(wb){
   });
 
   WEEK = {days,players,dates};
+  try{ localStorage.setItem(WEEK_KEY, JSON.stringify(WEEK)); }catch(e){}
   renderAll();
 }
 
@@ -312,8 +316,8 @@ function renderAll(){
   const pls = Object.keys(WEEK.players).length;
   const daysWithData = DAYS.filter(d=>WEEK.days[d].length>0).length;
   $('#weekRange').textContent = dateStr(WEEK.dates.Raven)+' → '+dateStr(WEEK.dates.Raid);
-  $('#daysLoaded').textContent = daysWithData+'/6 días';
-  $('#playersLoaded').textContent = pls+' jugadores';
+  $('#daysLoaded').textContent = daysWithData+'/6 days';
+  $('#playersLoaded').textContent = pls+' players';
 
   renderGraphic();
   renderCurrent();
@@ -334,39 +338,39 @@ function renderGraphic(){
 
   let html = `
   <div class="kpi-row">
-    <div class="kpi r1"><div class="label">Total Alianza</div><div class="val">${fmt(allianceTotal)}</div></div>
-    <div class="kpi r2"><div class="label">Jugadores</div><div class="val">${Object.keys(WEEK.players).length}</div></div>
+    <div class="kpi r1"><div class="label">Alliance Total</div><div class="val">${fmt(allianceTotal)}</div></div>
+    <div class="kpi r2"><div class="label">Players</div><div class="val">${Object.keys(WEEK.players).length}</div></div>
     <div class="kpi r3"><div class="label">Top Scorer</div><div class="val" style="font-size:1.1rem">${top10[0]?top10[0][0]:'—'}</div></div>
-    <div class="kpi r4"><div class="label">Mejor día (pts)</div><div class="val" style="font-size:1.1rem">${
+    <div class="kpi r4"><div class="label">Best Day (pts)</div><div class="val" style="font-size:1.1rem">${
       (()=>{const m=[...themeTotals].sort((a,b)=>b.total-a.total)[0];return m?DAY_LABEL[m.dn]:'—'})()
     }</div></div>
   </div>
 
   <div class="grid cols2">
     <div class="card">
-      <div class="card-h">📊 Top 10 — Puntos por Tema (stacked)</div>
+      <div class="card-h">📊 Top 10 — Points by Theme (stacked)</div>
       <div class="chart-wrap"><canvas id="chTheme"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-h">🏆 Top 10 — Total Semanal</div>
+      <div class="card-h">🏆 Top 10 — Weekly Total</div>
       <div class="chart-wrap"><canvas id="chTop"></canvas></div>
     </div>
   </div>
 
   <div class="grid cols2" style="margin-top:20px">
     <div class="card">
-      <div class="card-h">⚡ Puntos de Alianza por Tema</div>
+      <div class="card-h">⚡ Alliance Points by Theme</div>
       <div class="chart-wrap"><canvas id="chAlliance"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-h">🔻 Bottom 10 — Necesitan Mejorar</div>
+      <div class="card-h">🔻 Bottom 10 — Need Improvement</div>
       <div class="chart-wrap"><canvas id="chBottom"></canvas></div>
     </div>
   </div>
 
   <div class="grid cols2" style="margin-top:20px">
     <div class="card">
-      <div class="card-h">🗓 Totales por Tema</div>
+      <div class="card-h">🗓 Totals by Theme</div>
       <div class="card-b">${themeTotals.map(t=>`
         <div class="theme-tot" style="background:${DAY_COLOR[t.dn]}">
           <span>${DAY_EMOJI[t.dn]} ${DAY_LABEL[t.dn]}</span><span>${fmt(t.total)}</span>
@@ -374,7 +378,7 @@ function renderGraphic(){
       </div>
     </div>
     <div class="card">
-      <div class="card-h">📋 Top 10 — Desglose por día</div>
+      <div class="card-h">📋 Top 10 — Breakdown by Day</div>
       <div class="scrollx"><table>
         <thead><tr><th>Player</th>${DAYS.map(d=>`<th class="th-${DAY_CLASS[d]}">${DAY_EMOJI[d]} ${d}</th>`).join('')}<th class="num">Total</th></tr></thead>
         <tbody>${top10.map(([p,w])=>`<tr>
@@ -468,13 +472,13 @@ function renderUnder(){
   <div class="card">
     <div class="card-h" style="background:var(--maroon-bright);color:#fff;border-radius:0">
       ⚠️ Underperformers — Scored 0 on a played day
-      <span class="dim" style="margin-left:auto;color:rgba(255,255,255,.7);font-weight:400">${ups.length} jugadores</span>
+      <span class="dim" style="margin-left:auto;color:rgba(255,255,255,.7);font-weight:400">${ups.length} players</span>
     </div>
     <div class="legend">${DAYS.map(d=>`<span><span class="dot" style="background:${DAY_COLOR[d]}"></span>${d} = 0 pts</span>`).join('')}</div>
     <div class="scrollx"><table>
       <thead><tr><th>#</th><th>Player</th><th class="num">Total</th>
         ${DAYS.map(d=>`<th class="th-${DAY_CLASS[d]} num">${DAY_EMOJI[d]} ${d}</th>`).join('')}
-        <th class="num">Días</th><th>Notes</th></tr></thead>
+        <th class="num">Days</th><th>Notes</th></tr></thead>
       <tbody>${ups.map((o,i)=>`<tr>
         <td class="dim">${i+1}</td>
         <td class="player-nm">${o.p}</td>
@@ -506,21 +510,21 @@ function renderOverall(){
   const medals=['🥇','🥈','🥉'];
   let html='';
   if(rows.length===0){
-    html = `<div class="card"><div class="card-h">🏆 Overall Leaderboard (acumulado)</div>
+    html = `<div class="card"><div class="card-h">🏆 Overall Leaderboard (all-time)</div>
       <div class="empty" style="padding:50px">
         <div class="big">🏆</div>
-        <h2 style="font-size:1.1rem">Aún no hay datos acumulados</h2>
-        <p class="dim">Dale a <b>"Archivar → Overall"</b> arriba para sumar esta semana al histórico.<br>El acumulado se guarda en este navegador y persiste entre semanas.</p>
+        <h2 style="font-size:1.1rem">No accumulated data yet</h2>
+        <p class="dim">Hit <b>"Archive → Overall"</b> above to add this week to the all-time total.<br>The total is saved in this browser and persists across weeks.</p>
       </div></div>`;
   } else {
     html = `<div class="card">
-      <div class="card-h">🏆 Overall Leaderboard — All-time (acumulado)
-        <span class="dim" style="margin-left:auto;font-weight:400">${rows.length} jugadores · ${getWeekCount()} semanas archivadas</span>
+      <div class="card-h">🏆 Overall Leaderboard — All-time
+        <span class="dim" style="margin-left:auto;font-weight:400">${rows.length} players · ${getWeekCount()} weeks archived</span>
       </div>
       <div class="scrollx"><table>
         <thead><tr><th>Rank</th><th>Player</th><th class="num">Total</th>
           ${DAYS.map(d=>`<th class="th-${DAY_CLASS[d]} num">${DAY_EMOJI[d]} ${d}</th>`).join('')}
-          <th class="num">Semanas</th></tr></thead>
+          <th class="num">Weeks</th></tr></thead>
         <tbody>${rows.map((o,i)=>`<tr>
           <td class="medal">${medals[i]||(i+1)}</td>
           <td class="player-nm">${o.p}</td>
@@ -540,8 +544,8 @@ function getWeekCount(){
 
 /* archive current week into Overall */
 $('#archiveBtn').addEventListener('click',()=>{
-  if(!WEEK){ alert('Primero sube una semana.'); return; }
-  if(!confirm('¿Sumar esta semana al acumulado Overall?\n(Si ya archivaste esta misma semana, se sumaría doble — usa Reset si te equivocas.)')) return;
+  if(!WEEK){ alert('Upload a week first.'); return; }
+  if(!confirm('Add this week to the Overall total?\n(If you already archived this same week, it would double-count — use Reset if you make a mistake.)')) return;
   const store = loadOverall();
   Object.entries(WEEK.players).forEach(([p,w])=>{
     if(!store[p]) store[p]={Raven:0,Building:0,Scroll:0,Hero:0,Speedup:0,Raid:0,Total:0,Weeks:0};
@@ -552,11 +556,11 @@ $('#archiveBtn').addEventListener('click',()=>{
   localStorage.setItem(STORE_KEY,JSON.stringify(store));
   renderOverall(); showSavedBadge();
   switchView('overall');
-  alert('✓ Semana archivada al Overall.');
+  alert('✓ Week archived to Overall.');
 });
 
 $('#resetBtn').addEventListener('click',()=>{
-  if(confirm('¿Borrar TODO el acumulado histórico guardado en este navegador? No se puede deshacer.')){
+  if(confirm('Delete ALL accumulated history saved in this browser? This cannot be undone.')){
     localStorage.removeItem(STORE_KEY); renderOverall(); showSavedBadge();
   }
 });
@@ -568,9 +572,9 @@ function showSavedBadge(){
 function renderColor(){
   let html = `<div class="grid cols2">
     <div class="card">
-      <div class="card-h">🎁 Chest Tiers (por puntos en un día)</div>
+      <div class="card-h">🎁 Chest Tiers (by points in a single day)</div>
       <div class="card-b"><table>
-        <thead><tr><th>Tier</th><th class="num">Mínimo</th><th>Muestra</th></tr></thead>
+        <thead><tr><th>Tier</th><th class="num">Minimum</th><th>Sample</th></tr></thead>
         <tbody>${CHESTS.map(c=>`<tr>
           <td><b>${c.n}</b></td>
           <td class="num">≥ ${fmt(c.min)}</td>
@@ -579,7 +583,7 @@ function renderColor(){
       </table></div>
     </div>
     <div class="card">
-      <div class="card-h">📅 Colores por Día / Tema</div>
+      <div class="card-h">📅 Day / Theme Colors</div>
       <div class="card-b">${DAYS.map((d,i)=>`
         <div class="theme-tot" style="background:${DAY_COLOR[d]}">
           <span>Day ${i+1} — ${DAY_EMOJI[d]} ${DAY_LABEL[d]}</span>
@@ -603,6 +607,19 @@ switchView('graphic');
 
 function destroyCharts(){charts.forEach(c=>c.destroy());charts=[]}
 showSavedBadge();
+
+/* ---------- Auto-restore the last uploaded week on page load ---------- */
+(function restoreWeek(){
+  try{
+    const raw = localStorage.getItem(WEEK_KEY);
+    if(!raw) return;
+    const w = JSON.parse(raw);
+    if(w && w.days && w.players){
+      WEEK = w;
+      renderAll();
+    }
+  }catch(e){ console.warn('restore failed', e); }
+})();
 </script>
 </body>
 </html>
